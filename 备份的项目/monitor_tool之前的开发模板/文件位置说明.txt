@@ -1,0 +1,41 @@
+========================================
+check_result.txt 文件位置
+========================================
+
+文件完整路径：
+C:\Users\hahz\Desktop\嵌入式传感器\application\monitor_tool\check_result.txt
+
+简单说明：
+1. 打开文件资源管理器
+2. 进入桌面
+3. 打开"嵌入式传感器"文件夹
+4. 打开"application"文件夹
+5. 打开"monitor_tool"文件夹
+6. 找到 check_result.txt 文件
+
+快速打开方法：
+方法1：双击运行"查看文件位置.bat"文件，会自动打开check_result.txt
+
+方法2：在文件资源管理器的地址栏直接粘贴以下路径：
+C:\Users\hahz\Desktop\嵌入式传感器\application\monitor_tool
+
+然后找到 check_result.txt 文件
+
+方法3：在文件资源管理器的地址栏直接输入（如果路径有中文显示问题）：
+%USERPROFILE%\Desktop\嵌入式传感器\application\monitor_tool
+
+然后按回车，找到 check_result.txt 文件
+
+========================================
+其他输出文件位置
+========================================
+
+安装输出文件（如果运行了安装脚本）：
+安装输出结果.txt
+或
+command_output.txt
+
+位置都在：
+monitor_tool 文件夹内
+
+========================================

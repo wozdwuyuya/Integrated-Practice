@@ -1,0 +1,44 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"c:/Users/hahz/Desktop/lib\" && mkdir -p system sensor output algorithm comm app && echo \"Directories created\")",
+      "Bash(find \"E:/1study/嵌入式系统-grade3/嵌入式传感器\" -name \"soc_osal.h\" -type f 2>/dev/null | head -3)",
+      "Read(//e/1study/嵌入式系统-grade3/嵌入式传感器/**)",
+      "Bash(find \"E:/1study/嵌入式系统-grade3/嵌入式传感器\" -name \"cmsis_os2.h\" -type f 2>/dev/null | head -3)",
+      "Bash(find /e/ -name \"soc_osal.h\" -type f 2>/dev/null | head -3)",
+      "Read(//e//**)",
+      "Bash(find /e/ -name \"soc_osal.h\" -type f 2>/dev/null | head -5; find /c/Users/hahz -name \"soc_osal.h\" -type f 2>/dev/null | head -5)",
+      "Bash(mkdir -p \"c:/Users/hahz/Desktop/lib/.vscode\")",
+      "Bash(ls \"E:/MyBearPiProjects/\" 2>/dev/null || echo \"Directory not found\")",
+      "Read(//e/MyBearPiProjects/**)",
+      "Bash(mkdir -p \"E:/MyBearPiProjects/demo\" && echo \"Created\")",
+      "Bash(ls -la \"E:/bearpi/bearpi-pico_h3863/application/samples/\" 2>/dev/null || echo \"目录不存在\")",
+      "Read(//e/bearpi/bearpi-pico_h3863/application/samples/**)",
+      "Bash(ls -la \"E:/bearpi/bearpi-pico_h3863/application/\" 2>/dev/null | head -30)",
+      "Read(//e/bearpi/bearpi-pico_h3863/application/**)",
+      "Bash(mkdir -p \"E:/bearpi/bearpi-pico_h3863/application/samples/custom/demo\")",
+      "Bash(ls \"E:/bearpi/bearpi-pico_h3863/\" | head -30)",
+      "Read(//e/bearpi/bearpi-pico_h3863/**)",
+      "Bash(ls \"E:/bearpi/bearpi-pico_h3863/build/\" 2>/dev/null | head -20)",
+      "Read(//e/bearpi/bearpi-pico_h3863/build/**)",
+      "Read(//c/MinGW/**)",
+      "Read(//c/msys64/usr/bin/**)",
+      "Bash(ln -sf \"E:/MinGW-w64/mingw64/bin/mingw32-make.exe\" \"E:/MinGW-w64/mingw64/bin/make.exe\")",
+      "Read(//e/MinGW-w64/mingw64/bin/**)",
+      "Bash(\"E:/MinGW-w64/mingw64/bin/mingw32-make.exe\" --version)",
+      "Bash(export PATH=\"E:/MinGW-w64/mingw64/bin:$PATH\")",
+      "Bash(python build.py ws63 -component=demo -c)",
+      "Bash(python build.py ws63-liteos-app -component=demo -c)",
+      "Bash(pip install *)",
+      "Bash(python -c \"import ninja; print\\(ninja.BIN_DIR\\)\")",
+      "Bash(python -m ninja --version)",
+      "Bash(export PATH=\"C:/Users/hahz/AppData/Local/Programs/Python/Python311/Scripts:E:/MinGW-w64/mingw64/bin:$PATH\")",
+      "Bash(\"E:/bearpi/bearpi-pico_h3863/tools/bin/compiler/riscv/cc_riscv32_musl_105/cc_riscv32_musl_fp_win/bin/riscv32-linux-musl-gcc.exe\" --version)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\hahz\\Desktop\\lib",
+      "E:\\MyBearPiProjects",
+      "E:\\bearpi\\bearpi-pico_h3863\\application\\samples\\custom"
+    ]
+  }
+}

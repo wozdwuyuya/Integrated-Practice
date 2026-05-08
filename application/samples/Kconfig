@@ -1,0 +1,83 @@
+#===============================================================================
+# @brief    Kconfig file.
+# Copyright (c) @CompanyNameMagicTag 2023-2023. All rights reserved.
+#===============================================================================
+
+config ENABLE_PERIPHERAL_SAMPLE
+    bool
+    prompt "Enable the Sample of peripheral."
+    default n
+    depends on SAMPLE_ENABLE
+    help
+        This option means enable the sample of peripheral.
+
+if ENABLE_PERIPHERAL_SAMPLE
+osource "application/samples/peripheral/Kconfig"
+endif
+
+config ENABLE_WIFI_SAMPLE
+    bool
+    prompt "Enable the Sample of WIFI."
+    default n
+    depends on SAMPLE_ENABLE
+    help
+        This option means enable the sample of WIFI.
+
+if ENABLE_WIFI_SAMPLE
+osource "application/samples/wifi/Kconfig"
+endif
+
+config ENABLE_PRODUCTS_SAMPLE
+    bool
+    prompt "Enable the Sample of products."
+    default n
+    depends on SAMPLE_ENABLE
+    help
+        This option means enable the sample of products.
+if ENABLE_PRODUCTS_SAMPLE
+osource "application/samples/products/Kconfig"
+endif
+
+
+
+config ENABLE_QRSWORK_SAMPLE
+    bool
+    prompt "Enable the Sample of qrswork."
+    default n
+    depends on SAMPLE_ENABLE
+    help
+        This option means enable the sample of qrswork (heart rate monitor with SLE).
+
+if ENABLE_QRSWORK_SAMPLE
+choice
+    prompt "Select qrswork application type"
+    default SAMPLE_SUPPORT_QRSWORK
+    help
+        Select whether to build qrswork server or qrswork client.
+
+config SAMPLE_SUPPORT_QRSWORK
+    bool "qrswork Server (Heart rate sensor with SLE sender)"
+    help
+        Enable qrswork as SLE server, which reads heart rate sensor and sends data to clients.
+
+config SAMPLE_SUPPORT_QRSWORK_CLIENT
+    bool "qrswork Client (Heart rate data receiver)"
+    help
+        Enable qrswork client, which receives heart rate data via SLE and outputs to UART.
+endchoice
+
+if SAMPLE_SUPPORT_QRSWORK
+osource "application/samples/qrswork/Kconfig"
+endif
+
+if SAMPLE_SUPPORT_QRSWORK_CLIENT
+osource "application/samples/qrswork_client/Kconfig"
+endif
+
+endif
+
+
+
+
+
+

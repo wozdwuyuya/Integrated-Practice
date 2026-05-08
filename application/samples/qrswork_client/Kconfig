@@ -1,0 +1,27 @@
+#===============================================================================
+# @brief    Kconfig file for qrswork client
+#===============================================================================
+
+config QRSWORK_UART_BUS
+    int
+    prompt "Set the UART BUS for qrswork client."
+    default 0
+    depends on SAMPLE_SUPPORT_QRSWORK_CLIENT
+    help
+        This option sets the UART BUS for the qrswork client.
+
+config QRSWORK_UART_TXD_PIN
+    int
+    prompt "Choose UART TXD pin for qrswork client."
+    depends on SAMPLE_SUPPORT_QRSWORK_CLIENT
+    default 17
+
+config QRSWORK_UART_RXD_PIN
+    int
+    prompt "Choose UART RXD pin for qrswork client."
+    depends on SAMPLE_SUPPORT_QRSWORK_CLIENT
+    default 18
+
+config SUPPORT_SLE_CENTRAL
+    bool
+    default y if SAMPLE_SUPPORT_QRSWORK_CLIENT

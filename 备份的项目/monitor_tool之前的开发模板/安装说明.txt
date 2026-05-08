@@ -1,0 +1,40 @@
+========================================
+安装依赖说明
+========================================
+
+当前状态：
+- pyserial 已安装
+- matplotlib 未安装（需要安装）
+- numpy 未安装（需要安装）
+
+问题：
+遇到SSL连接错误，无法从PyPI下载包
+
+解决方法（按顺序尝试）：
+
+方法1：双击运行 install_simple.bat（最简单）
+   - 会自动尝试多个镜像源
+   - 自动验证安装结果
+
+方法2：手动运行命令（在命令行中）
+   
+   推荐命令（阿里云镜像）：
+   python -m pip install matplotlib numpy -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
+
+   或者使用清华镜像：
+   python -m pip install matplotlib numpy -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
+
+   或者使用信任主机参数：
+   python -m pip install matplotlib numpy --trusted-host pypi.org --trusted-host files.pythonhosted.org
+
+方法3：查看详细说明
+   - 打开 INSTALL_GUIDE.md 文件查看详细说明
+
+验证安装：
+   运行以下命令检查是否安装成功：
+   python -c "import matplotlib; import numpy; print('安装成功')"
+
+如果所有方法都失败，可能需要：
+1. 检查网络连接
+2. 配置代理设置
+3. 手动下载安装包（参考 INSTALL_GUIDE.md）

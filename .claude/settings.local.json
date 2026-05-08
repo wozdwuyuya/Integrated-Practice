@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "Bash(npm view *)",
+      "Read(//e/AI_Models/Claude_Skills/**)",
+      "Bash(npm install *)",
+      "Bash(node *)",
+      "Bash(uvx mcp-server-sqlite *)",
+      "Bash(where uvx *)",
+      "Bash(where.exe uvx *)",
+      "Bash(uvx which *)",
+      "Bash(python -c \"import shutil; print\\(shutil.which\\('uvx'\\)\\)\")",
+      "Bash(timeout 3 \"E:/AI_Models/Tools/uv/uvx.exe\" mcp-server-sqlite --db-path \"E:/AI_Models/Claude_Skills/databases/test.db\")",
+      "Bash(claude mcp *)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "sqlite"
+  ],
+  "enableAllProjectMcpServers": true
+}

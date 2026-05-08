@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "sqlite": {
+      "type": "stdio",
+      "command": "E:\\AI_Models\\Tools\\uv\\uvx.exe",
+      "args": [
+        "mcp-server-sqlite",
+        "--db-path",
+        "E:\\AI_Models\\Claude_Skills\\databases\\health_monitor.db"
+      ],
+      "env": {}
+    }
+  }
+}

@@ -1,0 +1,8 @@
+pyserial
+matplotlib
+numpy
+openai
+pyinstaller
+pandas
+scikit-learn
+joblib

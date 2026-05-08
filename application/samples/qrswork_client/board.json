@@ -1,0 +1,9 @@
+{
+    "board": "ws63-liteos-app",
+    "kernel": "liteos",
+    "chip": "ws63",
+    "module": "qrswork_client",
+    "menuconfig": {
+        "SAMPLE_SUPPORT_QRSWORK_CLIENT": "y"
+    }
+}

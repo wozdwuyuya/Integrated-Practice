@@ -1,0 +1,17 @@
+#===============================================================================
+# @brief    Kconfig file for qrswork
+#===============================================================================
+
+choice
+    prompt "Select qrswork type"
+    default SAMPLE_SUPPORT_QRSWORK_SERVER
+    depends on SAMPLE_SUPPORT_QRSWORK
+    config SAMPLE_SUPPORT_QRSWORK_SERVER
+        bool "Enable qrswork Server (Heart rate sender)."
+        help
+            Enable qrswork as SLE server, which sends heart rate data to clients.
+endchoice
+
+config SUPPORT_SLE_PERIPHERAL
+    bool
+    default y if (SAMPLE_SUPPORT_QRSWORK_SERVER)
