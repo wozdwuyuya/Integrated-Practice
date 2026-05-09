@@ -40,6 +40,16 @@
   - 用户 Prompt 中出现：`写文档`, `更新 README`, `接口文档`, `API 文档`
 - 卸载条件：文档生成完毕后，立即关闭。
 
+### 6. Changelog Manager (日志同步)
+- 默认状态：**OFF**
+- 作用：在代码修复/重构/功能更新类 commit 完成后，自动对比版本差异，按 Keep a Changelog 格式同步更新 `CHANGELOG.md`。
+- 触发条件（满足任一即激活）：
+  - 用户完成 `git commit` 且 commit message 前缀为 `fix:`、`refactor:`、`feat:`
+  - 用户执行 `/project:sync` 时，自动检测是否有未同步的代码变更
+  - 用户 Prompt 中出现：`更新 CHANGELOG`、`同步日志`、`记录变更`
+- 联动机制：执行 `/project:sync` 前，若检测到未同步的 fix/refactor/feat commit，**必须**提示用户是否先更新 CHANGELOG 再推送。
+- 卸载条件：CHANGELOG.md 更新完毕并确认内容准确后，立即关闭。
+
 ---
 
 ## 【人类最高指令】
@@ -55,5 +65,6 @@
 [OFF] Superpowers   - 纪律执行官
 [OFF] Bug Fixer     - 深度自审
 [OFF] Doc Writer    - 文档写作
+[OFF] Changelog Mgr - 日志同步
 ============================
 ```
