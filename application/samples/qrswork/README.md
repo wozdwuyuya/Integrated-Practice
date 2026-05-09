@@ -178,11 +178,60 @@ Heart rate data received: ADC=500, Heart Rate=120 BPM
 3. 服务端启动后会自动开启广播
 4. 客户端会自动扫描并连接到服务端
 5. 断线后客户端会自动重新扫描连接
-6. **硬件模拟模式**：`lib/app/health_monitor_main.h` 中 `MOCK_HARDWARE_MODE` 默认为 1（使用假数据调试）。
-   可通过 `menuconfig → QRSWORK_MOCK_HARDWARE` 关闭以使用真实传感器。
-   Kconfig 优先级高于头文件中的 `#ifndef` 默认值。
-7. **lib/ 目录迁移**：所有传感器、输出设备、算法、系统驱动已从项目根目录迁移至 `lib/` 子目录，
-   按功能分类存放。CMakeLists.txt 已同步更新 include 路径和源文件列表。
+
+### 🔧 硬件模拟开关 (MOCK_MODE)
+
+为了方便没有板子的组员调试逻辑，`QRSWORK_MOCK_HARDWARE` **默认开启**（使用假数据）。
+
+> **重要提示**：负责硬件连线的同学在进行实物调试前，**必须**通过以下命令将其关闭，否则传感器将始终输出模拟的假数据：
+>
+> ```bash
+> ./build.py menuconfig ws63-liteos-app
+> # 取消勾选：QRSWORK_MOCK_HARDWARE
+> ```
+>
+> 配置文件路径：`lib/app/health_monitor_main.h` 中 `MOCK_HARDWARE_MODE` 宏，Kconfig 优先级高于头文件中的 `#ifndef` 默认值。
+
+### ⚠️ 引脚复用 (Pinmux) 预检
+
+虽然本项目已核对小熊派标准引脚，但海思 Hi3863 底层存在 **PIN 资源复用（Pinmux）**。
+
+> **如果要在本项目基础上增加新的传感器或外设，请务必先查阅 SDK 的引脚复用表**，防止 UART、I2C 与 GPIO 产生冲突。
+>
+> 当前已占用的引脚资源：
+>
+> | 功能 | 引脚 | 复用模式 |
+> |------|------|---------|
+> | I2C1 SCL | GPIO15 | Mode 2 |
+> | I2C1 SDA | GPIO16 | Mode 2 |
+> | RGB LED R | GPIO6 | GPIO |
+> | RGB LED G | GPIO7 | GPIO |
+> | RGB LED B | GPIO8 | GPIO |
+> | 蜂鸣器 | GPIO5 | PWM |
+> | 振动传感器 | GPIO4 | GPIO |
+> | 振动马达 | GPIO3 | GPIO |
+> | UART TXD (客户端) | GPIO17 | Mode 1 |
+> | UART RXD (客户端) | GPIO18 | Mode 1 |
+
+### 🧹 强制执行清理编译 (Clean Build)
+
+由于 `lib/` 目录发生了重大的结构性迁移，CMake 的路径缓存可能导致编译报错。
+
+> **组员首要操作**：在执行 `git pull` 后，请**务必**先运行清理命令，再执行正式编译：
+>
+> ```bash
+> # 步骤 1：拉取最新代码
+> git pull origin main
+>
+> # 步骤 2：清理旧的编译缓存（二选一）
+> ./build.py clean              # 推荐方式
+> # 或手动删除 build/ 文件夹   # 备用方式
+>
+> # 步骤 3：正式编译
+> ./build.py ws63-liteos-app
+> ```
+>
+> **原因**：lib/ 从项目根目录迁移至 `application/samples/qrswork/lib/`，旧的 CMake 缓存中仍保留旧路径，会导致 `fatal error: xxx.h: No such file or directory`。
 
 ## 故障排查
 

@@ -15,6 +15,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 
 ---
 
+### 工程协作提醒
+
+> 以下 3 条注意事项适用于所有组员，请在 `git pull` 后优先阅读。
+
+| # | 类别 | 要点 | 操作 |
+|---|------|------|------|
+| 1 | 🔧 硬件模拟开关 | `QRSWORK_MOCK_HARDWARE` 默认开启，传感器输出假数据 | 实物调试前必须 `menuconfig` 关闭 |
+| 2 | ⚠️ 引脚复用预检 | Hi3863 存在 Pinmux 复用，新增外设前需查表 | 当前已占用 GPIO3/4/5/6/7/8/15/16/17/18 |
+| 3 | 🧹 清理编译 | lib/ 目录迁移后 CMake 缓存路径失效 | `git pull` 后必须先 `./build.py clean` 再编译 |
+
+---
+
 ### Fixed
 
 #### WiFi 北向传输 P0/P1 级别缺陷（commit `2f82fcd`）
