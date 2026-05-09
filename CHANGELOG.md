@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 
 ---
 
-## [Unreleased] - 2026-05-10
+## [v1.0.0-alpha] - 2026-05-10
 
 ### 架构升级：lib/ 目录迁移 + WiFi 北向传输修复
 
@@ -178,3 +178,7 @@ ls application/samples/qrswork/lib/
 ### 已知未解决
 
 - OLED 字符截断风险（行宽 18 字符）
+
+---
+
+[v1.0.0-alpha]: https://github.com/wozdwuyuya/Integrated-Practice/compare/v1.0.0-alpha...HEAD
