@@ -50,6 +50,7 @@ node_modules/
 .idea/
 .DS_Store
 Thumbs.db
+.claude/settings.local.json
 
 # ===========================================
 # 6. 强制放行的黄金资产

@@ -16,10 +16,32 @@ application/samples/
 │   ├── qrswork.h                      # 头文件
 │   ├── Kconfig                        # 配置文件
 │   ├── CMakeLists.txt                 # CMake构建文件
-│   ├── lib/                           # 硬件驱动库
+│   ├── lib/                           # 硬件驱动库（按功能分子目录）
 │   │   ├── led.c/h                    # LED驱动
 │   │   ├── rgb.c/h                    # RGB灯驱动
-│   │   └── ky.c/h                     # 心跳传感器驱动
+│   │   ├── ky.c/h                     # 心跳传感器驱动（原始）
+│   │   ├── sle_comm.c/h               # SLE 通信封装
+│   │   ├── sensor/                    # 传感器驱动
+│   │   │   ├── max30102.c/h           #   心率+血氧传感器
+│   │   │   ├── mpu6050.c/h            #   六轴加速度/陀螺仪
+│   │   │   ├── ky039.c/h              #   心跳传感器（KY-039）
+│   │   │   ├── sw420.c/h              #   振动传感器
+│   │   │   └── data_filter.c/h        #   数据滤波算法
+│   │   ├── output/                    # 输出设备驱动
+│   │   │   ├── ssd1306.c/h            #   OLED 显示屏
+│   │   │   ├── ssd1306_fonts.c/h      #   字体数据
+│   │   │   ├── rgb_led.c/h            #   RGB LED 控制
+│   │   │   ├── beep.c/h               #   蜂鸣器
+│   │   │   └── vibration_motor.c/h    #   振动马达
+│   │   ├── algorithm/                 # 算法模块
+│   │   │   ├── fall_detection.c/h     #   跌倒检测
+│   │   │   ├── breath_guide.c/h       #   呼吸引导
+│   │   │   ├── health_alert.c/h       #   健康告警
+│   │   │   └── attitude_estimation.c/h#   姿态估算
+│   │   ├── system/                    # 系统底层驱动
+│   │   │   └── i2c_master.c/h         #   I2C 总线驱动
+│   │   └── app/                       # 应用主循环
+│   │       └── health_monitor_main.c/h#   健康监测主任务
 │   └── qrswork_server/                # SLE服务端实现
 │       ├── qrswork_server.c           # 服务端核心逻辑
 │       ├── qrswork_server.h           # 服务端头文件
@@ -30,6 +52,9 @@ application/samples/
     ├── qrswork_client_main.c          # 客户端主程序
     ├── qrswork_client.c               # 客户端实现
     ├── qrswork_client.h               # 客户端头文件
+    ├── northbound_client.c/h          # WiFi 北向 UDP 传输
+    ├── wifi/                          # WiFi STA 连接模块
+    │   └── wifi_connect.c/h           #   WiFi 状态机连接
     ├── Kconfig                        # 配置文件
     ├── CMakeLists.txt                 # CMake构建文件
     └── board.json                     # 板级配置
@@ -153,6 +178,11 @@ Heart rate data received: ADC=500, Heart Rate=120 BPM
 3. 服务端启动后会自动开启广播
 4. 客户端会自动扫描并连接到服务端
 5. 断线后客户端会自动重新扫描连接
+6. **硬件模拟模式**：`lib/app/health_monitor_main.h` 中 `MOCK_HARDWARE_MODE` 默认为 1（使用假数据调试）。
+   可通过 `menuconfig → QRSWORK_MOCK_HARDWARE` 关闭以使用真实传感器。
+   Kconfig 优先级高于头文件中的 `#ifndef` 默认值。
+7. **lib/ 目录迁移**：所有传感器、输出设备、算法、系统驱动已从项目根目录迁移至 `lib/` 子目录，
+   按功能分类存放。CMakeLists.txt 已同步更新 include 路径和源文件列表。
 
 ## 故障排查
 
