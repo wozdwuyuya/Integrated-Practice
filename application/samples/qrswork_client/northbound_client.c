@@ -11,7 +11,7 @@
 #include "northbound_client.h"
 #include "wifi_connect.h"
 
-#define QRSWORK_NB_TASK_PRIO             27
+#define QRSWORK_NB_TASK_PRIO             13
 #define QRSWORK_NB_TASK_STACK_SIZE       0x1800
 #define QRSWORK_NB_QUEUE_LEN             12
 #define QRSWORK_NB_PAYLOAD_MAX_LEN       192
@@ -20,17 +20,30 @@
 #define QRSWORK_NB_COMMAND_MAX_LEN       128
 #define QRSWORK_NB_LOG                   "[qrswork northbound]"
 
+#define QRSWORK_NB_MSG_DATA              0
+#define QRSWORK_NB_MSG_RECONNECT         1
+
 typedef struct {
+    uint8_t type;
     uint16_t len;
     char payload[QRSWORK_NB_PAYLOAD_MAX_LEN];
 } qrswork_nb_msg_t;
 
 static unsigned long g_qrswork_nb_queue_id;
-static int g_qrswork_nb_queue_ready = 0;
-static int g_qrswork_nb_task_started = 0;
+static volatile int g_qrswork_nb_queue_ready = 0;
+static volatile int g_qrswork_nb_task_started = 0;
 static int g_qrswork_nb_sock = -1;
 static struct sockaddr_in g_qrswork_nb_server_addr;
 static socklen_t g_qrswork_nb_server_addr_len = sizeof(g_qrswork_nb_server_addr);
+
+static void northbound_client_close_socket(void)
+{
+    if (g_qrswork_nb_sock >= 0) {
+        lwip_close(g_qrswork_nb_sock);
+        g_qrswork_nb_sock = -1;
+        osal_printk("%s socket closed\r\n", QRSWORK_NB_LOG);
+    }
+}
 
 static int northbound_client_create_socket(void)
 {
@@ -40,7 +53,12 @@ static int northbound_client_create_socket(void)
         return -1;
     }
 
-    memset_s(&g_qrswork_nb_server_addr, sizeof(g_qrswork_nb_server_addr), 0, sizeof(g_qrswork_nb_server_addr));
+    if (memset_s(&g_qrswork_nb_server_addr, sizeof(g_qrswork_nb_server_addr), 0,
+        sizeof(g_qrswork_nb_server_addr)) != EOK) {
+        osal_printk("%s memset server addr failed\r\n", QRSWORK_NB_LOG);
+        northbound_client_close_socket();
+        return -1;
+    }
     g_qrswork_nb_server_addr.sin_family = AF_INET;
     g_qrswork_nb_server_addr.sin_port = htons(CONFIG_QRSWORK_SERVER_PORT);
     g_qrswork_nb_server_addr.sin_addr.s_addr = inet_addr(CONFIG_QRSWORK_SERVER_IP);
@@ -76,9 +94,21 @@ static void northbound_client_send_message(const qrswork_nb_msg_t *msg)
     northbound_client_poll_command();
 }
 
+static void northbound_client_handle_reconnect(void)
+{
+    osal_printk("%s reconnect triggered\r\n", QRSWORK_NB_LOG);
+    northbound_client_close_socket();
+
+    while (northbound_client_create_socket() != 0) {
+        osal_printk("%s socket recreate failed, retry\r\n", QRSWORK_NB_LOG);
+        osal_msleep(QRSWORK_NB_RETRY_DELAY_MS);
+    }
+    osal_printk("%s reconnect success\r\n", QRSWORK_NB_LOG);
+}
+
 static void *northbound_client_task(const char *arg)
 {
-    unused(arg);
+    UNUSED(arg);
 
     while (qrswork_wifi_connect(CONFIG_QRSWORK_WIFI_SSID, CONFIG_QRSWORK_WIFI_PSK) != 0) {
         osal_printk("%s WiFi connect failed, retry later\r\n", QRSWORK_NB_LOG);
@@ -94,7 +124,11 @@ static void *northbound_client_task(const char *arg)
         unsigned int msg_size = sizeof(msg);
         if (osal_msg_queue_read_copy(g_qrswork_nb_queue_id, &msg, &msg_size, OSAL_MSGQ_WAIT_FOREVER) ==
             OSAL_SUCCESS) {
-            northbound_client_send_message(&msg);
+            if (msg.type == QRSWORK_NB_MSG_RECONNECT) {
+                northbound_client_handle_reconnect();
+            } else {
+                northbound_client_send_message(&msg);
+            }
         }
     }
 
@@ -111,6 +145,7 @@ static int northbound_client_enqueue(const char *payload, uint16_t len)
         len = QRSWORK_NB_PAYLOAD_MAX_LEN - 1;
     }
 
+    msg.type = QRSWORK_NB_MSG_DATA;
     msg.len = len;
     if (memcpy_s(msg.payload, sizeof(msg.payload), payload, len) != EOK) {
         return -1;
@@ -125,6 +160,21 @@ static int northbound_client_enqueue(const char *payload, uint16_t len)
         return -1;
     }
     return 0;
+}
+
+void northbound_client_notify_wifi_disconnect(void)
+{
+    qrswork_nb_msg_t msg = {0};
+
+    if (g_qrswork_nb_queue_ready == 0) {
+        return;
+    }
+
+    msg.type = QRSWORK_NB_MSG_RECONNECT;
+    msg.len = 0;
+    if (osal_msg_queue_write_copy(g_qrswork_nb_queue_id, &msg, sizeof(msg), OSAL_MSGQ_NO_WAIT) != OSAL_SUCCESS) {
+        osal_printk("%s enqueue reconnect failed\r\n", QRSWORK_NB_LOG);
+    }
 }
 
 int northbound_client_start(void)

@@ -14,6 +14,7 @@ extern "C" {
 #endif
 
 int northbound_client_start(void);
+void northbound_client_notify_wifi_disconnect(void);
 void northbound_client_publish_heart(uint32_t adc, uint32_t bpm);
 void northbound_client_publish_raw(const uint8_t *data, uint16_t len);
 

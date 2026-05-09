@@ -10,6 +10,7 @@
 #include "td_base.h"
 #include "td_type.h"
 #include "wifi_connect.h"
+#include "northbound_client.h"
 #include "wifi_hotspot.h"
 #include "wifi_hotspot_config.h"
 
@@ -31,7 +32,7 @@ enum {
     QRSWORK_WIFI_STA_GET_IP,
 };
 
-static td_u8 g_qrswork_wifi_state = QRSWORK_WIFI_STA_INIT;
+static volatile td_u8 g_qrswork_wifi_state = QRSWORK_WIFI_STA_INIT;
 
 static td_void qrswork_wifi_scan_state_changed(td_s32 state, td_s32 size)
 {
@@ -49,6 +50,7 @@ static td_void qrswork_wifi_connection_changed(td_s32 state, const wifi_linked_i
     if (state == QRSWORK_WIFI_NOT_AVAILABLE) {
         osal_printk("%s connect failed, retrying\r\n", QRSWORK_WIFI_LOG);
         g_qrswork_wifi_state = QRSWORK_WIFI_STA_INIT;
+        northbound_client_notify_wifi_disconnect();
     } else {
         osal_printk("%s connect success\r\n", QRSWORK_WIFI_LOG);
         g_qrswork_wifi_state = QRSWORK_WIFI_STA_CONNECT_DONE;
@@ -111,7 +113,7 @@ static td_s32 qrswork_wifi_get_match_network(wifi_sta_config_stru *expected_bss,
     return 0;
 }
 
-static td_bool qrswork_wifi_check_dhcp_status(struct netif *netif_p, td_u32 *wait_count)
+static int qrswork_wifi_check_dhcp_status(struct netif *netif_p, td_u32 *wait_count)
 {
     if ((ip_addr_isany(&(netif_p->ip_addr)) == 0) && (*wait_count <= QRSWORK_WIFI_GET_IP_MAX_COUNT)) {
         osal_printk("%s DHCP success\r\n", QRSWORK_WIFI_LOG);
