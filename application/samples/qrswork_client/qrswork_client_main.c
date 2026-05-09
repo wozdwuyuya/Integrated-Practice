@@ -14,6 +14,9 @@
 #include "sle_errcode.h"
 #include "sle_connection_manager.h"
 #include "sle_ssap_client.h"
+#if defined(CONFIG_QRSWORK_NORTHBOUND_ENABLE)
+#include "northbound_client.h"
+#endif
 
 #define QRSWORK_CLIENT_TASK_PRIO         28
 #define QRSWORK_CLIENT_TASK_STACK_SIZE   0x1000
@@ -68,6 +71,12 @@ static void *qrswork_client_task(const char *arg)
     // 初始化 UART
     uart_init_pin();
     uart_init_config();
+
+#if defined(CONFIG_QRSWORK_NORTHBOUND_ENABLE)
+    if (northbound_client_start() != 0) {
+        osal_printk("%s northbound client start failed\r\n", QRSWORK_CLIENT_LOG);
+    }
+#endif
     
     // 初始化 SLE 客户端（注册回调）
     qrswork_client_init(qrswork_notification_cb, qrswork_indication_cb);

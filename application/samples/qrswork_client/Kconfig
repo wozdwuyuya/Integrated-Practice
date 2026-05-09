@@ -22,6 +22,47 @@ config QRSWORK_UART_RXD_PIN
     depends on SAMPLE_SUPPORT_QRSWORK_CLIENT
     default 18
 
+config QRSWORK_NORTHBOUND_ENABLE
+    bool
+    prompt "Enable WiFi northbound uplink for qrswork client."
+    default y
+    depends on SAMPLE_SUPPORT_QRSWORK_CLIENT
+    help
+        Enable WiFi STA mode and UDP uplink to a northbound computer/server.
+
+config QRSWORK_WIFI_SSID
+    string
+    prompt "WiFi SSID for northbound uplink."
+    default "test"
+    depends on QRSWORK_NORTHBOUND_ENABLE
+    help
+        SSID of the WiFi network that the board connects to in STA mode.
+
+config QRSWORK_WIFI_PSK
+    string
+    prompt "WiFi password for northbound uplink."
+    default "0987654321"
+    depends on QRSWORK_NORTHBOUND_ENABLE
+    help
+        Password of the WiFi network that the board connects to.
+
+config QRSWORK_SERVER_IP
+    string
+    prompt "Northbound server IPv4 address."
+    default "192.168.1.175"
+    depends on QRSWORK_NORTHBOUND_ENABLE
+    help
+        IPv4 address of the computer/server receiving qrswork UDP data.
+
+config QRSWORK_SERVER_PORT
+    int
+    prompt "Northbound server UDP port."
+    default 8888
+    range 1 65535
+    depends on QRSWORK_NORTHBOUND_ENABLE
+    help
+        UDP port of the computer/server receiving qrswork data.
+
 config SUPPORT_SLE_CENTRAL
     bool
     default y if SAMPLE_SUPPORT_QRSWORK_CLIENT

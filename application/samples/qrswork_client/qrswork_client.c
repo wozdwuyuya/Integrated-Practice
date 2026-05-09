@@ -13,6 +13,9 @@
 #include "sle_errcode.h"
 #include "qrswork_client.h"
 #include "uart.h"
+#if defined(CONFIG_QRSWORK_NORTHBOUND_ENABLE)
+#include "northbound_client.h"
+#endif
 
 #define SLE_MTU_SIZE_DEFAULT            520
 #define SLE_SEEK_INTERVAL_DEFAULT       100
@@ -224,14 +227,23 @@ void qrswork_notification_cb(uint8_t client_id, uint16_t conn_id,
         if (data->data_len == 2) {
             uint16_t heart_rate = (data->data[1] << 8) | data->data[0];
             osal_printk("Heart Rate = %d BPM\r\n", heart_rate);
+#if defined(CONFIG_QRSWORK_NORTHBOUND_ENABLE)
+            northbound_client_publish_heart(0, heart_rate);
+#endif
         } else if (data->data_len == 4) {
             uint32_t heart_adc = (data->data[3] << 24) | (data->data[2] << 16) | 
                                  (data->data[1] << 8) | data->data[0];
             if (heart_adc > 0) {
                 uint32_t heart_bpm = 60000 / heart_adc;
                 osal_printk("ADC=%u, Heart Rate=%u BPM\r\n", heart_adc, heart_bpm);
+#if defined(CONFIG_QRSWORK_NORTHBOUND_ENABLE)
+                northbound_client_publish_heart(heart_adc, heart_bpm);
+#endif
             } else {
                 osal_printk("ADC=%u (No heart detected)\r\n", heart_adc);
+#if defined(CONFIG_QRSWORK_NORTHBOUND_ENABLE)
+                northbound_client_publish_heart(heart_adc, 0);
+#endif
             }
         } else {
             // 以原始数据格式输出
@@ -240,6 +252,9 @@ void qrswork_notification_cb(uint8_t client_id, uint16_t conn_id,
                 osal_printk("0x%02x ", data->data[i]);
             }
             osal_printk("\r\n");
+#if defined(CONFIG_QRSWORK_NORTHBOUND_ENABLE)
+            northbound_client_publish_raw(data->data, data->data_len);
+#endif
         }
     } else {
         osal_printk("%s notification data is NULL or empty\r\n", QRSWORK_CLIENT_LOG);
