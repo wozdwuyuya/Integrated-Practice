@@ -15,3 +15,11 @@ endchoice
 config SUPPORT_SLE_PERIPHERAL
     bool
     default y if (SAMPLE_SUPPORT_QRSWORK_SERVER)
+
+config QRSWORK_MOCK_HARDWARE
+    bool "Enable mock hardware mode (use fake sensor data for debugging)"
+    default y
+    help
+        When enabled, health_monitor_main uses simulated sensor data instead
+        of reading from real MAX30102/MPU6050 hardware. Useful for development
+        without physical sensors connected. Disable for production builds.
