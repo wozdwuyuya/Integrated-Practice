@@ -9,6 +9,7 @@
 #include "pinctrl.h"
 #include "errcode.h"
 #include "osal_debug.h"
+#include "system/system_utils.h"
 
 // 震动回调函数
 static sw420_callback_t g_vibration_callback = NULL;
@@ -16,8 +17,17 @@ static sw420_callback_t g_vibration_callback = NULL;
 // 震动计数
 static volatile uint32_t g_vibration_count = 0;
 
-// 中断处理函数
+// 消抖：上次触发时间戳
+static volatile uint32_t g_last_irq_time = 0;
+#define SW420_DEBOUNCE_MS  50  // 50ms 消抖窗口
+
+// 中断处理函数（带消抖）
 static void sw420_irq_handler(uint8_t pin, uint32_t data){
+    uint32_t now = get_time_ms();
+    if(now - g_last_irq_time < SW420_DEBOUNCE_MS) {
+        return;  // 消抖期内，忽略本次中断
+    }
+    g_last_irq_time = now;
     g_vibration_count++;
 
     // 调用用户注册的回调函数

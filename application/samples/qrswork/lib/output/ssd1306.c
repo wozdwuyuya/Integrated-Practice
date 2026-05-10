@@ -178,7 +178,7 @@ void ssd1306_Init_CMD(void)
     ssd1306_WriteCommand(0xF0); // --set divide ratio
 
     ssd1306_WriteCommand(0xD9); // --set pre-charge period
-    ssd1306_WriteCommand(0x11); // 0x22 by default
+    ssd1306_WriteCommand(0xF1); // SSD1306 datasheet: Phase1=15, Phase2=1 for internal VCC
 
     ssd1306_WriteCommand(0xDA); // --set com pins hardware configuration - CHECK
 #if (SSD1306_HEIGHT == 32)

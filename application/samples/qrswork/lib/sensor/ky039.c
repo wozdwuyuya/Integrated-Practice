@@ -96,8 +96,9 @@ bool ky039_read_heart_rate(ky039_data_t *data){
 
     current_time = get_time_ms();
 
-    // 峰值检测算法
-    if(adc_value > g_last_peak_value) {
+    // 峰值检测算法（带冷却期保护）
+    // 冷却期内不更新峰值，防止同一心跳周期的噪声被误判为新峰值
+    if(adc_value > g_last_peak_value && (current_time - g_last_peak_time) > KY039_MIN_INTERVAL) {
         g_last_peak_value = adc_value;
     }
     else if(g_last_peak_value > 0 && adc_value < g_last_peak_value * 0.8) {
