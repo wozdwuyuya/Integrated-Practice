@@ -5,9 +5,9 @@
 # ======================================================================
 # 头文件搜索路径：确保 qrswork 主程序及各子模块能互相 #include
 # ======================================================================
-# lib/ 根目录：支持 #include "sensor/max30102.h"、#include "output/ssd1306.h" 等相对路径
+# lib/ 根目录：支持 #include "sensor/mpu6050.h"、#include "output/ssd1306.h" 等相对路径
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
-# sensor/：支持 #include "max30102.h"、#include "mpu6050.h"
+# sensor/：支持 #include "mpu6050.h"、#include "ky039.h"
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor)
 # output/：支持 #include "ssd1306.h"、#include "rgb_led.h"
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/output)
@@ -17,6 +17,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/system)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/algorithm)
 # app/：支持 #include "health_monitor_main.h"
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/app)
+# test/：支持 #include "test/mpu6050_test.h"
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/test)
 # qrswork_server/：支持 #include "qrswork_server.h"
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/qrswork_server)
 
@@ -56,6 +58,8 @@ if(DEFINED CONFIG_SAMPLE_SUPPORT_QRSWORK_SERVER)
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/sle_comm.c
         # --- [迁移] 健康监测主循环 (原 lib/app/) ---
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/app/health_monitor_main.c
+        # --- 集成测试 ---
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/test/mpu6050_test.c
     )
 
     set(PUBLIC_HEADER_LIST
@@ -90,6 +94,8 @@ else()
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/sle_comm.c
         # --- [迁移] 健康监测主循环 ---
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/app/health_monitor_main.c
+        # --- 集成测试 ---
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/test/mpu6050_test.c
     )
 
     set(PUBLIC_HEADER_LIST
