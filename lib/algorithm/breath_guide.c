@@ -135,7 +135,7 @@ void breath_guide_display(uint8_t y){
 
     // [四柱-提醒] 第1行：阶段 + 轮次
     ssd1306_SetCursor(0, y);
-    char line1[22];
+    char line1[28];
     snprintf(line1, sizeof(line1), "%s %d/%d", text, g_cycle_count + 1, BREATH_MAX_CYCLES);
     ssd1306_DrawString(line1, Font_7x10, White);
 

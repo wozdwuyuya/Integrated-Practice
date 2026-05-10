@@ -42,7 +42,7 @@
 #define MAX30102_LED_CURRENT_DEFAULT 0x1F
 
 // 输出数据：return_ac[0]为心率(BPM), return_ac[1]为血氧(%)
-extern uint32_t return_ac[2];
+extern volatile uint32_t return_ac[2];
 
 /**
  * @brief  MAX30102初始化：验证ID、软件复位、配置寄存器、启动定时器

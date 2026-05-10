@@ -81,12 +81,15 @@ void ssd1306_WriteCommand(uint8_t byte)
 void ssd1306_WriteData(uint8_t *buffer, uint32_t buff_size)
 {
     uint8_t data[SSD1306_WIDTH * DOUBLE] = {0};
+    if (buff_size > SSD1306_WIDTH) {
+        buff_size = SSD1306_WIDTH;
+    }
     for (uint32_t i = 0; i < buff_size; i++) {
         data[i * DOUBLE] = SSD1306_CTRL_DATA | SSD1306_MASK_CONT;
         data[i * DOUBLE + 1] = buffer[i];
     }
     data[(buff_size - 1) * DOUBLE] = SSD1306_CTRL_DATA;
-    ssd1306_SendData(data, sizeof(data));
+    ssd1306_SendData(data, buff_size * DOUBLE);
 }
 
 #elif defined(SSD1306_USE_SPI)

@@ -10,7 +10,7 @@
 #include "sensor/data_filter.h"
 #include "osal_debug.h"
 
-uint32_t return_ac[2] = {0};
+volatile uint32_t return_ac[2] = {0};
 
 // ========== 定时器配置 ==========
 #define SAMPLE_INTERVAL_US   10000   // 10ms采样间隔
@@ -22,12 +22,12 @@ static uint32_t last_time = 0;
 static timer_handle_t timer = NULL;
 static uint8_t ready = 0;
 
-// 定时器回调：每10ms触发一次
+// 定时器回调：每10ms触发一次（单次模式，由主循环 is_time() 重启）
 static void timer_callback(uintptr_t data)
 {
     system_tick_ms += SAMPLE_INTERVAL_MS;
     ready = 1;
-    uapi_timer_start(timer, SAMPLE_INTERVAL_US, timer_callback, 0);
+    // 注意：不在回调内调用 uapi_timer_start，防止中断上下文栈溢出
 }
 
 // 获取系统时间(ms)
@@ -36,7 +36,7 @@ static uint32_t get_time_ms(void)
     return system_tick_ms;
 }
 
-// 定时器初始化：配置10ms周期定时器
+// 定时器初始化：配置10ms单次定时器
 static bool timer_init(void)
 {
     errcode_t ret;
@@ -70,6 +70,10 @@ bool is_time(void)
     if (ready && elapsed >= SAMPLE_INTERVAL_MS) {
         last_time = current_time;
         ready = 0;
+        // 主循环中重启单次定时器（比中断上下文更安全）
+        if (timer != NULL) {
+            uapi_timer_start(timer, SAMPLE_INTERVAL_US, timer_callback, 0);
+        }
         return true;
     }
     return false;
