@@ -1,7 +1,7 @@
 /**
  * @file i2c_master.h
  * @brief I2C主设备初始化头文件
- * @note 包含I2C总线初始化、SSD1306、MAX30102、MPU6050设备初始化
+ * @note 包含I2C总线初始化、SSD1306、MPU6050设备初始化
  */
 
 #ifndef I2C_MASTER_H

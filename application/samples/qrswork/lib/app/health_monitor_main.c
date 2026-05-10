@@ -3,7 +3,7 @@
  * @brief 智能健康监测系统主程序实现
  * @note [四柱-监测] 数据质量评估
  * @note [四柱-架构] 系统状态机
- * @note 整合MAX30102、MPU6050、KY-039、SW-420、OLED、RGB、蜂鸣器、震动马达、SLE通信
+ * @note 整合MPU6050、KY-039、SW-420、OLED、RGB、蜂鸣器、震动马达、SLE通信
  */
 
 #include "app/health_monitor_main.h"
@@ -14,7 +14,6 @@
 #if MOCK_HARDWARE_MODE
 #include <math.h>
 #endif
-#include "sensor/max30102.h"
 #include "sensor/mpu6050.h"
 #include "sensor/sw420.h"
 #include "sensor/ky039.h"
@@ -48,9 +47,6 @@ static bool g_temp_valid = false;     // 温度数据有效
 static bool g_imu_valid = false;      // IMU数据有效
 static uint32_t g_last_hr_update = 0; // 心率最后有效更新时间
 
-// [四柱-监测] 心率源：MAX30102为主，KY-039为备
-static bool g_hr_source_max30102 = true;  // true=MAX30102, false=KY-039
-
 // [MOCK] 模拟数据生成器：有规律波动的假数据，用于无硬件调试
 #if MOCK_HARDWARE_MODE
 static uint32_t g_mock_tick = 0;
@@ -78,7 +74,6 @@ static void mock_generate_data(void){
     g_spo2_valid = true;
     g_temp_valid = true;
     g_imu_valid = true;
-    g_hr_source_max30102 = true;
 }
 #endif
 
@@ -112,7 +107,7 @@ bool health_monitor_init(void){
 #if MOCK_HARDWARE_MODE
     osal_printk("[MOCK] Skipping hardware init, using simulated data\r\n");
 #else
-    // 初始化I2C总线及设备（SSD1306、MAX30102、MPU6050）
+    // 初始化I2C总线及设备（SSD1306、MPU6050）
     all_i2c_init();
 
     // 初始化其他硬件
@@ -200,31 +195,17 @@ static void update_sensor_data(void){
     // Mock模式：生成模拟数据
     mock_generate_data();
 #else
-    // 真实模式：读取MAX30102心率血氧（由app_main主循环单线程采样，这里只消费结果）
-    if(return_ac[0] > 0) {
-        g_heart_rate = return_ac[0];
-        g_spo2 = return_ac[1];
+    // 真实模式：KY-039心率传感器（ADC采集）
+    ky039_data_t ky_data;
+    if(ky039_read_heart_rate(&ky_data) && ky_data.valid) {
+        g_heart_rate = ky_data.heart_rate;
         g_hr_valid = true;
-        g_spo2_valid = (g_spo2 > 0);
-        g_hr_source_max30102 = true;
         g_last_hr_update = now;
     }
 
     // [四柱-监测] 心率过期检查：超过DATA_STALE_TIMEOUT_MS无更新视为无效
     if(g_hr_valid && (now - g_last_hr_update > DATA_STALE_TIMEOUT_MS)) {
         g_hr_valid = false;
-        g_spo2_valid = false;
-    }
-
-    // [四柱-监测] KY-039备用心率：MAX30102无效时自动切换
-    if(!g_hr_valid) {
-        ky039_data_t ky_data;
-        if(ky039_read_heart_rate(&ky_data) && ky_data.valid) {
-            g_heart_rate = ky_data.heart_rate;
-            g_hr_valid = true;
-            g_hr_source_max30102 = false;
-            g_last_hr_update = now;
-        }
     }
 
     // 读取MPU6050数据
@@ -363,7 +344,7 @@ static void send_data_to_serial(void){
         fall_detection_get_confidence(),
         (fall_detection_get_state() == FALL_STATE_FALLEN) ? "true" : "false",
         health_alert_get_text(),
-        g_hr_source_max30102 ? "max30102" : "ky039",
+        "ky039",
         g_hr_valid ? "true" : "false",
         g_spo2_valid ? "true" : "false",
         g_temp_valid ? "true" : "false",
@@ -399,7 +380,7 @@ void health_monitor_send_data(void){
         fall_detection_get_confidence(),
         (fall_detection_get_state() == FALL_STATE_FALLEN) ? "true" : "false",
         health_alert_get_text(),
-        g_hr_source_max30102 ? "max30102" : "ky039",
+        "ky039",
         g_hr_valid ? "true" : "false",
         g_spo2_valid ? "true" : "false",
         g_temp_valid ? "true" : "false",

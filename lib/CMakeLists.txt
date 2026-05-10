@@ -5,7 +5,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 set(SOURCES_LIST
     ${CMAKE_CURRENT_SOURCE_DIR}/app_main.c
     ${CMAKE_CURRENT_SOURCE_DIR}/system/i2c_master.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/sensor/max30102.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor/mpu6050.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor/ky039.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor/sw420.c

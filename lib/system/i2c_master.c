@@ -1,12 +1,11 @@
 /**
  * @file i2c_master.c
  * @brief I2C主设备初始化和外设配置
- * @note 初始化I2C总线、SSD1306显示屏、MAX30102传感器、MPU6050
+ * @note 初始化I2C总线、SSD1306显示屏、MPU6050
  */
 
 #include "i2c_master.h"
 #include "sensor/mpu6050.h"
-#include "sensor/max30102.h"
 #include "output/ssd1306.h"
 #include "output/ssd1306_fonts.h"
 #include "gpio.h"
@@ -76,7 +75,7 @@ static void app_i2c_init_pin(void)
 }
 
 
-// I2C总线初始化：初始化引脚、I2C控制器、SSD1306、MAX30102
+// I2C总线初始化：初始化引脚、I2C控制器、SSD1306、MPU6050
 void all_i2c_init(void){
     errcode_t ret;
 
@@ -115,15 +114,7 @@ void all_i2c_init(void){
     ssd1306_Init();
     osDelay(50);
 
-    osal_printk("[I2C] Step5: Init MAX30102 (addr=0x57)...\r\n");
-    if(max30102_init()){
-        osal_printk("[I2C] MAX30102 OK\r\n");
-    }else{
-        osal_printk("[I2C] MAX30102 FAIL - check wiring and address\r\n");
-    }
-    osDelay(50);
-
-    osal_printk("[I2C] Step6: Init MPU6050 (addr=0x68)...\r\n");
+    osal_printk("[I2C] Step5: Init MPU6050 (addr=0x68)...\r\n");
     if(mpu6050_init(MPU6050_ACCEL_RANGE_4G, MPU6050_GYRO_RANGE_500)){
         osal_printk("[I2C] MPU6050 OK\r\n");
     }else{

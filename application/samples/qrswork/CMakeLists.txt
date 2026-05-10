@@ -35,7 +35,6 @@ if(DEFINED CONFIG_SAMPLE_SUPPORT_QRSWORK_SERVER)
         ${CMAKE_CURRENT_SOURCE_DIR}/qrswork_server/qrswork_server_adv.c
         ${CMAKE_CURRENT_SOURCE_DIR}/qrswork_server/qrswork_server.c
         # --- [迁移] 传感器驱动 (原 lib/sensor/) ---
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/max30102.c
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/mpu6050.c
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/ky039.c
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/sw420.c
@@ -70,7 +69,6 @@ else()
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/ky.c
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/rgb.c
         # --- [迁移] 传感器驱动 ---
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/max30102.c
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/mpu6050.c
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/ky039.c
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/sw420.c

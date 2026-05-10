@@ -12,8 +12,7 @@
  *   SDA = GPIO16 (复用信号2)  ← H3863 唯一有 I2C1_SDA 功能的引脚
  *   挂载设备：
  *     1. SSD1315 OLED（I2C地址 0x3C，128x64，兼容SSD1306驱动）
- *     2. MAX30102 心率血氧（I2C地址 0x57）
- *     3. MPU6050 三轴陀螺仪+三轴加速度（I2C地址 0x68）
+ *     2. MPU6050 三轴陀螺仪+三轴加速度（I2C地址 0x68）
  *
  * KY-039 心率传感器 —— sensor/ky039.c
  *   当前配置：ADC_CHANNEL_2（参考qrswork模板）
@@ -37,9 +36,6 @@
  *   共阳接法：GPIO LOW = 点亮，GPIO HIGH = 熄灭
  *   ⚠️ 如果改接共阴灯珠，需反转 rgb_led.c 中所有 GPIO_LEVEL（HIGH↔LOW）
  *
- * MAX30102 心率血氧 —— sensor/max30102.c
- *   I2C 地址 0x57，与 OLED/MPU6050 共享 I2C 总线
- *
  * ======================================================================
  */
 
@@ -48,7 +44,6 @@
 #include "cmsis_os2.h"
 #include "app_init.h"
 #include "app/health_monitor_main.h"
-#include "sensor/max30102.h"
 #include "output/ssd1306.h"
 #include "output/rgb_led.h"
 
@@ -77,11 +72,6 @@ static void *main_task(const char *arg)
     osal_printk("[MAIN] System running!\r\n");
 
     while(g_system_running) {
-#if !MOCK_HARDWARE_MODE
-        if(is_time()) {
-            main_max30102_data();
-        }
-#endif
         health_monitor_loop();
         osDelay(10);
     }

@@ -1,7 +1,7 @@
 /**
  * @file mpu6050.c
  * @brief MPU6050六轴IMU传感器驱动实现
- * @note 使用I2C接口，与MAX30102、OLED共用总线
+ * @note 使用I2C接口，与OLED共用总线
  */
 
 #include "mpu6050.h"
