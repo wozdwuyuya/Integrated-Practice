@@ -63,6 +63,7 @@ if(DEFINED CONFIG_SAMPLE_SUPPORT_QRSWORK_SERVER)
         ${LIB_ROOT}/system/i2c_master.c
         # --- SLE 通信 ---
         ${LIB_ROOT}/comm/sle_comm.c
+        ${LIB_ROOT}/comm/tcp_server.c
         # --- 健康监测主循环 ---
         ${LIB_ROOT}/app/health_monitor_main.c
         # --- 集成测试 ---
@@ -101,6 +102,7 @@ else()
         ${LIB_ROOT}/system/i2c_master.c
         # --- SLE 通信 ---
         ${LIB_ROOT}/comm/sle_comm.c
+        ${LIB_ROOT}/comm/tcp_server.c
         # --- 健康监测主循环 ---
         ${LIB_ROOT}/app/health_monitor_main.c
         # --- 集成测试 ---

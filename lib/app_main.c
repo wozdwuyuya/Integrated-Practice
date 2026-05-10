@@ -46,6 +46,7 @@
 #include "app/health_monitor_main.h"
 #include "output/ssd1306.h"
 #include "output/rgb_led.h"
+#include "comm/tcp_server.h"
 
 #define MAIN_TASK_STACK_SIZE    0x2000
 #define MAIN_TASK_PRIO          (osPriority_t)(17)
@@ -57,6 +58,12 @@ static void *main_task(const char *arg)
     unused(arg);
 
     osal_printk("[MAIN] Main task started\r\n");
+
+    // [Phase 2] 初始化 WiFi AP 模式（在系统初始化之前）
+    if (!tcp_server_wifi_init()) {
+        osal_printk("[MAIN] WiFi AP init FAILED!\r\n");
+        // WiFi 失败不阻塞系统启动，继续运行
+    }
 
     if(!health_monitor_init()) {
         osal_printk("[MAIN] System init FAILED!\r\n");
