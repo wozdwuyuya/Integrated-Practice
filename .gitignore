@@ -22,7 +22,7 @@ dist/
 *.hex
 .ninja*
 *.zip
-小熊派3863开发参考源码/HiSpark_Toolchain/
+references/bearpi_3863_sdk/HiSpark_Toolchain/
 
 # ===========================================
 # 3. Python 环境与脚本缓存
