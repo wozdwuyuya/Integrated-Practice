@@ -26,6 +26,7 @@
 #include "algorithm/attitude_estimation.h"
 #include "output/ssd1306.h"
 #include "comm/sle_comm.h"
+#include "cJSON.h"
 
 // 系统状态
 static system_state_t g_system_state = SYS_STATE_INIT;
@@ -352,6 +353,57 @@ static void send_data_to_serial(void){
     );
 
     osal_printk("%s", buf);
+}
+
+// [Phase 3] 数据融合JSON构建（使用cJSON，供TCP通道使用）
+char *data_fusion_build_json(void){
+    cJSON *root = cJSON_CreateObject();
+    if(root == NULL) return NULL;
+
+    // 核心生命体征
+    cJSON_AddNumberToObject(root, "hr", (double)g_heart_rate);
+    cJSON_AddNumberToObject(root, "spo2", (double)g_spo2);
+    cJSON_AddNumberToObject(root, "temp", (double)g_temperature);
+
+    // IMU数组（float[] → cJSON double array，手动构造避免类型不匹配）
+    cJSON *accel = cJSON_CreateArray();
+    for(int i = 0; i < 3; i++) {
+        cJSON_AddItemToArray(accel, cJSON_CreateNumber((double)g_accel[i]));
+    }
+    cJSON_AddItemToObject(root, "accel", accel);
+
+    cJSON *gyro = cJSON_CreateArray();
+    for(int i = 0; i < 3; i++) {
+        cJSON_AddItemToArray(gyro, cJSON_CreateNumber((double)g_gyro[i]));
+    }
+    cJSON_AddItemToObject(root, "gyro", gyro);
+
+    // 姿态角
+    cJSON_AddNumberToObject(root, "pitch", (double)attitude_get_pitch());
+    cJSON_AddNumberToObject(root, "roll", (double)attitude_get_roll());
+
+    // 跌倒检测
+    cJSON_AddNumberToObject(root, "fall_conf", (double)fall_detection_get_confidence());
+    cJSON_AddBoolToObject(root, "fall_alert",
+        fall_detection_get_state() == FALL_STATE_FALLEN);
+
+    // 健康状态文本
+    cJSON_AddStringToObject(root, "status", health_alert_get_text());
+
+    // 数据源标识
+    cJSON_AddStringToObject(root, "hr_source", "ky039");
+
+    // 数据有效性子对象
+    cJSON *valid = cJSON_CreateObject();
+    cJSON_AddBoolToObject(valid, "hr", g_hr_valid);
+    cJSON_AddBoolToObject(valid, "spo2", g_spo2_valid);
+    cJSON_AddBoolToObject(valid, "temp", g_temp_valid);
+    cJSON_AddBoolToObject(valid, "imu", g_imu_valid);
+    cJSON_AddItemToObject(root, "valid", valid);
+
+    char *json_str = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    return json_str;
 }
 
 // 发送传感器数据到手机端（通过SLE）

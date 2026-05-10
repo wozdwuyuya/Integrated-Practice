@@ -1,3 +1,4 @@
+// 协作提示：此文件已由 lib/ 迁移，硬件引脚严格保持小熊派原始定义。
 /**
  * @file health_monitor_main.h
  * @brief 智能健康监测系统主程序头文件
@@ -28,8 +29,14 @@ typedef enum {
 #define DATA_STALE_TIMEOUT_MS       5000
 
 // 硬件模拟模式：1=使用假数据（无硬件调试），0=使用真实传感器
+// 优先从 Kconfig 读取（menuconfig → QRSWORK_MOCK_HARDWARE），
+// 未配置时回退到默认值 1（开发阶段默认开启模拟）
+#ifdef CONFIG_QRSWORK_MOCK_HARDWARE
+#define MOCK_HARDWARE_MODE  1
+#else
 #ifndef MOCK_HARDWARE_MODE
 #define MOCK_HARDWARE_MODE  1
+#endif
 #endif
 
 /**
@@ -75,5 +82,12 @@ void health_monitor_send_data(void);
  * @param cmd 命令字符串
  */
 void health_monitor_process_command(const char *cmd);
+
+/**
+ * @brief 构建传感器数据融合的JSON字符串（使用cJSON）
+ * @note  返回的字符串由调用方负责 cJSON_free() 释放
+ * @return JSON字符串指针，失败返回NULL
+ */
+char *data_fusion_build_json(void);
 
 #endif // HEALTH_MONITOR_MAIN_H
