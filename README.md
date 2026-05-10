@@ -35,6 +35,42 @@
 
 ---
 
+## Quick Start / 快速编译与烧录
+
+### 前置依赖
+
+本工程依赖 **HiSpark Toolchain**（RISC-V 交叉编译工具链）。请确保：
+1. 已将 `references/bearpi_3863_sdk/HiSpark_Toolchain/` 解压至本地（该目录已被 `.gitignore` 忽略，需手动获取）
+2. 已安装 Python 3.8+（SDK 构建脚本 `build.py` 依赖 Python）
+
+### 编译
+
+```bash
+# 进入 SDK 根目录
+cd references/bearpi_3863_sdk/bearpi-pico_h3863
+
+# 清理并编译（首次编译或 pull 后必须先 clean）
+python build.py -c ws63
+
+# 仅编译特定组件（例如只编译 application）
+python build.py ws63 -component=application
+
+# 多线程编译（指定线程数）
+python build.py -j8 ws63
+```
+
+编译产物输出至 `output/` 目录。
+
+### 烧录
+
+<待补充：请使用 HiFlash 或 J-Link 烧录 `output/` 目录下的 `.bin` 文件至开发板>
+
+### 验证
+
+烧录完成后，通过串口工具（波特率 115200）连接开发板，观察启动日志确认固件运行正常。
+
+---
+
 ## 开发与查阅指引
 
 | 你要做什么 | 去哪里看 |
