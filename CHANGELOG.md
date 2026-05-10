@@ -166,6 +166,108 @@ ls application/samples/qrswork/lib/
 
 ---
 
+## [v1.1.0-beta] - 2026-05-11
+
+### 北向通信全栈实现：cJSON + WiFi AP + TCP Server
+
+本次更新完成从嵌入式设备到 Android App 的完整 TCP 通信链路，包含 5 个原子提交。
+
+---
+
+### 工程协作提醒
+
+> 以下 3 条注意事项适用于所有组员，请在 `git pull` 后优先阅读。
+
+| # | 类别 | 要点 | 操作 |
+|---|------|------|------|
+| 1 | 📶 WiFi 热点 | 设备启动后自动创建 `HealthMonitor` 热点 | 手机直接连接，无需路由器 |
+| 2 | 🔌 TCP 连接 | App 连接 `192.168.4.1:5000` | 每秒收到完整健康 JSON |
+| 3 | 📋 协议文档 | `docs/northbound_protocol_v1_0.md` 包含完整协议规范 | App 开发必读 |
+
+---
+
+### Added
+
+#### cJSON 数据融合构建器（commit `b8e109f`）
+
+- 引入 SDK 自带 cJSON 库（`open_source/cjson/cjson/`）
+- 新增 `data_fusion_build_json()` 函数，使用 cJSON 构建完整传感器 JSON
+- 修复 `float[]` → `double` 类型转换问题（手动循环避免内存错位）
+- JSON 字段与 App 端 `HealthData.fromJson()` 完全对齐
+
+#### WiFi SoftAP 热点初始化（commit `4d2c5f3`）
+
+- 新增 `lib/comm/tcp_server.c` 和 `tcp_server.h`
+- 实现 5 步初始化序列：等待 WiFi → 扩展配置 → 启动热点 → 设置 IP → 启动 DHCP
+- 配置：SSID=`HealthMonitor`，密码=`12345678`，IP=`192.168.4.1`，信道 6
+- WiFi 初始化失败不阻塞系统启动（设备仍可通过串口和 SLE 工作）
+
+#### TCP Server 数据泵与命令接收（commit `02c1b21`）
+
+- 实现 `tcp_server_task()` 独立内核线程
+- Socket 生命周期：`socket()` → `bind(5000)` → `listen(1)` → `accept()` 循环
+- 数据泵：每 1 秒调用 `data_fusion_build_json()` → `send()` JSON + `\n`
+- 命令接收：`select()` 非阻塞检测 → `recv()` → `health_monitor_process_command()`
+- 异常恢复：客户端断开后自动关闭 socket，回到 `accept()` 等待重连
+- 内存安全：`cJSON_free()` 释放所有 JSON 分配，严防泄漏
+
+#### 北向通信协议文档（commit `2f6a273`）
+
+- 新增 `docs/northbound_protocol_v1_0.md`（250 行）
+- 包含：WiFi 配置、TCP 参数、上行 JSON 结构、下行命令格式、状态机说明
+- JSON 字段名与代码 100% 对齐验证通过
+
+---
+
+### Changed
+
+#### 架构重构：消除双黄蛋（commit `77bb642`）
+
+- 将 `application/samples/qrswork/lib/` 的独有代码同步至根目录 `lib/`
+- 删除 `qrswork/lib/` 目录，消除代码分叉
+- CMakeLists.txt 改用 `LIB_ROOT` 变量指向根目录 `lib/`
+- 根目录 `lib/` 成为唯一代码源
+
+#### 系统入口集成（commit `4d2c5f3` + `02c1b21`）
+
+- `lib/app_main.c` 新增 `#include "comm/tcp_server.h"`
+- `main_task()` 初始化序列更新：
+  1. `tcp_server_wifi_init()` — WiFi AP 启动（失败不阻塞）
+  2. `health_monitor_init()` — 传感器与算法初始化
+  3. `tcp_server_start()` — TCP Server 后台任务启动（失败不阻塞）
+  4. `health_monitor_loop()` — 主循环
+
+---
+
+### 技术决策记录
+
+| 决策 | 选项 | 理由 |
+|------|------|------|
+| JSON 库选型 | cJSON（SDK 自带） | 支持嵌套数组，维护性优于 snprintf |
+| 串口/TCP 双通道 | snprintf 串口 + cJSON TCP | 串口零开销，TCP 灵活扩展 |
+| WiFi 模式 | AP 模式 | 无需路由器，App 直连设备 |
+| TCP 并发模型 | 单客户端 listen(1) | 健康监测场景仅一个手机连接 |
+| 发送频率 | 1 秒 | 平衡实时性与功耗 |
+
+---
+
+### 组员同步指南
+
+```bash
+# 1. 拉取最新代码
+git pull origin main
+
+# 2. 编译验证
+python build.py -c ws63-liteos-app
+
+# 3. App 端连接
+#    WiFi: HealthMonitor / 12345678
+#    TCP:  192.168.4.1:5000
+#    协议: docs/northbound_protocol_v1_0.md
+```
+
+---
+
 ## [历史记录] - 2026-04-30 ~ 2026-05-07
 
 > 以下记录迁移自 `lib/CHANGELOG.md`，保留完整历史。详见 [lib/CHANGELOG.md](lib/CHANGELOG.md)。
