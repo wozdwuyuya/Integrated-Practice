@@ -78,6 +78,11 @@ static void *main_task(const char *arg)
 #endif
     osal_printk("[MAIN] System running!\r\n");
 
+    // [Phase 3] 启动 TCP Server 后台任务（独立线程，失败不阻塞主循环）
+    if (!tcp_server_start()) {
+        osal_printk("[MAIN] TCP Server start FAILED!\r\n");
+    }
+
     while(g_system_running) {
         health_monitor_loop();
         osDelay(10);
