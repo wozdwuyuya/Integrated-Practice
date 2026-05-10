@@ -8,6 +8,7 @@ set(SOURCES_LIST
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor/mpu6050.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor/ky039.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor/sw420.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/sensor/max30102.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sensor/data_filter.c
     ${CMAKE_CURRENT_SOURCE_DIR}/output/ssd1306.c
     ${CMAKE_CURRENT_SOURCE_DIR}/output/ssd1306_fonts.c

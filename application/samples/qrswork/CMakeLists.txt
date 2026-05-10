@@ -40,6 +40,7 @@ if(DEFINED CONFIG_SAMPLE_SUPPORT_QRSWORK_SERVER)
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/mpu6050.c
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/ky039.c
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/sw420.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/max30102.c
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/data_filter.c
         # --- [迁移] 输出设备驱动 (原 lib/output/) ---
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/output/ssd1306.c
@@ -60,6 +61,7 @@ if(DEFINED CONFIG_SAMPLE_SUPPORT_QRSWORK_SERVER)
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/app/health_monitor_main.c
         # --- 集成测试 ---
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/test/mpu6050_test.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/test/max30102_test.c
     )
 
     set(PUBLIC_HEADER_LIST
@@ -76,6 +78,7 @@ else()
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/mpu6050.c
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/ky039.c
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/sw420.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/max30102.c
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/sensor/data_filter.c
         # --- [迁移] 输出设备驱动 ---
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/output/ssd1306.c
@@ -96,6 +99,7 @@ else()
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/app/health_monitor_main.c
         # --- 集成测试 ---
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/test/mpu6050_test.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/test/max30102_test.c
     )
 
     set(PUBLIC_HEADER_LIST
