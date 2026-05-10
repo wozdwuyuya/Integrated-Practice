@@ -83,4 +83,11 @@ void health_monitor_send_data(void);
  */
 void health_monitor_process_command(const char *cmd);
 
+/**
+ * @brief 构建传感器数据融合的JSON字符串（使用cJSON）
+ * @note  返回的字符串由调用方负责 cJSON_free() 释放
+ * @return JSON字符串指针，失败返回NULL
+ */
+char *data_fusion_build_json(void);
+
 #endif // HEALTH_MONITOR_MAIN_H

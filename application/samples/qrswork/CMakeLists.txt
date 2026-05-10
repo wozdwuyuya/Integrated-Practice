@@ -21,6 +21,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/app)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/test)
 # qrswork_server/：支持 #include "qrswork_server.h"
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/qrswork_server)
+# cJSON：支持 #include "cJSON.h"（SDK 自带 open_source/cjson）
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../../references/bearpi_3863_sdk/bearpi-pico_h3863/open_source/cjson/cjson)
 
 # ======================================================================
 # 源文件列表
