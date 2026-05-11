@@ -1,221 +1,147 @@
-# POST_MORTEM_AND_TEMPLATES.md
+# 综合实训技术复盘报告：BearPi-Hi3863 嵌入式健康监测系统
 
-> BearPi-H3863 Smart Health Monitor | 工程资产萃取文档
-> 封存日期：2026-05-12 | 最后提交：`d2effd6`
+> 课程名称：综合实训 Grade 3
+> 报告日期：2026-05-12
 > 项目仓库：https://github.com/wozdwuyuya/Integrated-Practice.git
 
 ---
 
-## 一、经验平移：从 I2C 总线到异步并发的降维打击心法
+## 一、项目概述
 
-### 1.1 本次踩坑全景
-
-本项目在 `lib/system/i2c_master.c` 和 `lib/app/health_monitor_main.c` 中完成了三轮
-I2C 总线安全改造。核心矛盾：两个 RTOS 线程（MainTask 优先级 17、TCPServerTask 优先级 12）
-共享一条物理 I2C 总线，挂载 OLED(0x3C) 和 MPU6050(0x68) 两个设备。
-
-踩坑序列：
-
-| 阶段 | 问题 | 根因 | 解法 |
-|------|------|------|------|
-| 初始设计 | 无总线保护 | 缺乏并发意识 | 全局 `osMutexId_t g_i2c_bus_mutex` |
-| Plan B | `osWaitForever` 永久阻塞 | 总线挂死时锁永远不释放 | 500ms 超时 + GPIO 脉冲恢复 |
-| Plan A | OLED 刷屏期间 MPU6050 延迟抖动 | 锁粒度为单次 I2C 事务 | `_locked` 变体，整个刷屏持锁 |
-| Plan A 二次踩坑 | 同线程重复加锁死锁 | CMSIS Mutex 非递归 | 底层 `i2c_write_raw` 绕过内部锁 |
-| Plan C | TCP 推送 JSON 数据撕裂 | 无跨线程数据快照保护 | 独立 `g_data_mutex` |
-
-### 1.2 通用并发避坑指南（前端 / Python / 任意异步场景）
-
-以下原则从嵌入式 Mutex 实战中提炼，适用于任何存在并发访问的系统：
-
-#### 原则 1：锁的粒度决定性能与安全的平衡点
-
-```
-嵌入式教训：OLED 单事务锁导致刷屏被 MPU6050 穿插，延迟抖动 40ms
-前端映射：  React setState 在高频事件中被拆分，UI 出现中间态闪烁
-Python映射：asyncio 中 await 点导致共享状态被其他协程修改
-```
-
-**规则**：锁的范围应覆盖一个完整的"逻辑原子操作"，而非单个底层调用。
-在前端中，这意味着批量 DOM 更新应在一个 `requestAnimationFrame` 或
-`unstable_batchedUpdates` 内完成。在 Python asyncio 中，共享状态的
-读-改-写序列不应在中间插入 `await`。
-
-#### 原则 2：永远不要信任"永远等待"
-
-```
-嵌入式教训：osWaitForever + 总线挂死 = 系统冻结
-前端映射：  await fetch() 无超时 = 用户界面永久 Loading
-Python映射：socket.recv() 无 timeout = 线程泄漏
-```
-
-**规则**：任何等待外部资源的操作都必须有超时和降级路径。
-`i2c_master_lock()` 从 `osWaitForever` 改为 500ms 超时 + 恢复重试，
-等价于前端的 `AbortController` + 重试逻辑，等价于 Python 的
-`asyncio.wait_for(coro, timeout=5.0)`。
-
-#### 原则 3：警惕"锁套锁"——确认你的锁是否可重入
-
-```
-嵌入式教训：update_oled_display() 外层加锁 + ssd1306_SendData() 内层加锁 = 死锁
-前端映射：  嵌套的 useSelector/useDispatch 在 concurrent mode 下的 tearing
-Python映射：threading.Lock() 不可重入，RLock() 才是递归锁
-```
-
-**规则**：在加锁前，必须审计被调用链中是否已有锁操作。
-如果无法确认，要么使用可重入锁（ReentrantMutex / RLock），
-要么提供 `_nolock` / `_internal` 变体函数供已持锁的调用方使用。
-本项目的 `ssd1306_UpdateScreen_locked()` 就是这一策略的产物。
-
-#### 原则 4：数据快照与数据操作分离
-
-```
-嵌入式教训：TCP 线程读取 g_heart_rate 时主线程正在更新，JSON 数据撕裂
-前端映射：  Redux 中间件读取 state 时 dispatch 正在进行 reducer
-Python映射：多线程读写 dict 导致 RuntimeError: dictionary changed size
-```
-
-**规则**：生产者和消费者共享数据时，要么用锁保护读写窗口（本项目方案），
-要么使用不可变快照（Copy-on-Write）。
-在前端中，React 的 `useDeferredValue` 和 Zustand 的 `subscribe` 就是
-快照思想的体现。在 Python 中，`queue.Queue` 和 `asyncio.Queue` 是
-线程安全的生产者-消费者原语。
+本项目基于 BearPi-Hi3863 开发板，设计并实现了一套智能健康监测系统。系统集成
+多种传感器（MPU6050 六轴 IMU、KY-039 心率、SW-420 振动检测）、OLED 显示、
+RGB/蜂鸣器/振动马达输出、星闪（SLE）通信及 WiFi TCP 数据传输等功能模块，
+采用 CMSIS-RTOS2 实时操作系统进行多任务调度。
 
 ---
 
-## 二、下一代 Agent 宪法模板
+## 二、总线安全与 RTOS 线程安全技术总结
 
-> 以下模板已去除 Hi3863 硬件特异性描述，保留通用工程纪律。
-> 可直接复制到任意项目的 `CLAUDE.md` 中使用。
+### 2.1 问题背景
 
-```markdown
-# Claude Code Agent Execution Protocol (Universal)
+系统中 OLED 显示屏（SSD1306，I2C 地址 0x3C）与六轴惯性测量单元（MPU6050，
+I2C 地址 0x68）共用同一条 I2C 总线（GPIO15/16，I2C1，400KHz Fast Mode）。
 
-## 0. Project Map (Key Paths)
-*说明：这是架构师定义的核心工作区。除非得到特殊指令，否则探索范围仅限于此。*
-- 工作区根目录: `<ROOT>`
-- 应用入口 (Entry): `<ENTRY_FILE>`
-- 核心业务逻辑 (Core): `<CORE_MODULE>`
-- 只读参考 (Reference - DO NOT TOUCH): `<REFERENCE_DIR>`
+RTOS 线程架构如下：
 
-## 1. 角色定位 (Role)
-你是一个极其严谨的高级软件工程师。核心职责：精准执行指令、分析本地源码、
-严格按规范修改代码并保证构建零报错。
+| 线程名称 | 优先级 | 职责 | I2C 访问 |
+|----------|--------|------|----------|
+| MainTask | 17 | 传感器采集、算法处理、OLED 刷新 | MPU6050 读取 + SSD1306 写入 |
+| TCPServerTask | 12 | WiFi AP 管理、TCP 数据推送 | 无直接 I2C 访问 |
 
-## 2. 核心工作流 (Agent Execution Protocol)
+由于两个 I2C 设备共享总线且分属不同的调用路径，若缺乏有效的总线仲裁机制，
+将产生以下风险：总线冲突、数据撕裂、线程死锁。
 
-### 2.1 Explore First
-未读取源码前严禁给出建议。优先查阅 Project Map 定位。
+### 2.2 改造方案与实施
 
-### 2.2 Pre-computation
-修改前必须在脑海模拟对构建配置（CMakeLists / package.json / pyproject.toml）
-或依赖项的影响。
+#### 2.2.1 全局互斥锁基础架构
 
-### 2.3 Atomic Changes
-修改必须原子化。顺序：修改逻辑 -> 修改配置 -> 更新文档 -> 独立 Commit。
-**单次 Commit 只解决一个问题。** 多个问题 = 多个 Commit。
+在 `lib/system/i2c_master.c` 中引入全局互斥锁 `g_i2c_bus_mutex`，
+通过 `i2c_master_lock()` / `i2c_master_unlock()` 接口封装，
+SSD1306 驱动（`lib/output/ssd1306.c`）和 MPU6050 驱动（`lib/sensor/mpu6050.c`）
+均在每次 I2C 事务前后调用锁接口。
 
-### 2.4 Tool-Loop（反思循环）
-修改后严禁干等。主动搜索测试或要求开发者验证，遇错触发 Reflexion：
-1. 复现错误
-2. 定位根因（不是症状）
-3. 修复根因
-4. 验证修复不引入新问题
+#### 2.2.2 超时机制与运行时总线恢复
 
-### 2.5 Plan Mode 协作协议
-- 架构师（用户）定义目标和约束
-- 执行者（Agent）输出 Plan，等待批准后才能写代码
-- Plan 阶段只读不写，修改阶段严格按 Plan 执行
+原始实现中 `osMutexAcquire()` 使用 `osWaitForever` 参数，
+当 I2C 总线物理层异常（如 SDA 被从设备持续拉低）时，持有锁的线程将永久阻塞，
+其他等待锁的线程随之死锁。
 
-## 3. 防崩溃绝对红线
+改造方案：将超时参数从 `osWaitForever` 改为 500ms（`I2C_LOCK_TIMEOUT_MS`）。
+超时触发后，通过 GPIO 模拟 SCL 时钟脉冲（最多 9 个脉冲）尝试释放总线，
+随后生成 STOP 条件并恢复 I2C 引脚复用模式，最后重试一次锁获取。
 
-### 3.1 拒绝幻觉
-第三方库无此函数时严禁捏造 API。必须先 `grep` 或读文档确认。
+改动文件：`lib/system/i2c_master.c`，提交记录：`a58a40c`。
 
-### 3.2 并发与内存安全
-- 数组操作必查越界
-- `malloc/free` 必成对
-- 共享资源必配互斥锁，锁必须有超时
-- 锁嵌套前必须审计调用链是否已持锁
+#### 2.2.3 OLED 刷新操作级互斥
 
-### 3.3 反懒惰禁止占位符
-修改代码绝对禁止使用 `// ... existing code ...` 或 `/* 略 */`。
-必须输出完整函数块，保护单点真实源。这是对代码库的尊重，
-也是对审查者的负责。
+原始设计中，`ssd1306_UpdateScreen()` 每次底层 I2C 传输独立加锁/解锁。
+一次完整的 OLED 刷新（8 页 x 4 次 I2C 事务 = 32 次锁操作）期间，
+MPU6050 的读取请求可在任意两次锁操作之间插入，导致 OLED 刷新时间被拉长。
 
-## 4. 高危操作阻断
-- 只读目录严禁写入
-- `git rm`、`rm -rf`、覆盖构建配置必须请求人工授权
+改造方案：在 SSD1306 驱动中新增 `ssd1306_UpdateScreen_locked()` 变体函数，
+内部使用不经由互斥锁的底层写入接口（`ssd1306_i2c_write_raw()`）。
+业务层 `update_oled_display()` 函数在缓冲区操作完成后，统一持锁调用
+`ssd1306_UpdateScreen_locked()` 完成整屏刷新。
 
-## 5. 输出格式
-- **[Thinking Process]**：探勘、拆解、反思
-- **[Action Plan]**：文件路径 + 预期改动
-- **[Final Answer]**：核心代码块
-- **极致降噪**：汇报极度简练，严禁客套话
+实施过程中发现了一个关键设计问题：若在调用方直接加锁包裹
+`update_oled_display()`，而函数内部的 `ssd1306_SendData()` 又会尝试获取同一把
+非递归互斥锁，将导致同线程死锁。解决方案是提供 `_locked` 后缀的底层变体函数，
+绕过驱动内部的锁机制，由外层统一管理总线互斥。
 
-## 6. 文档与日志管理
-- 增量追加更新，严禁大面积覆盖
-- 连续 Commit 或完成 Phase 后，主动读取 `git log` 提炼更新日志
-```
+改动文件：`lib/output/ssd1306.c`、`lib/output/ssd1306.h`、`lib/app/health_monitor_main.c`，
+提交记录：`8aa7fb2`。
 
----
+#### 2.2.4 跨线程数据快照同步
 
-## 三、单兵作战工程反思
+TCPServerTask 通过 `data_fusion_build_json()` 函数读取主线程维护的全局传感器数据
+（心率、血氧、加速度、陀螺仪等）并构建 JSON 字符串推送至客户端。
+由于读取和写入操作分属不同线程且无同步保护，JSON 输出可能包含不一致的数据快照。
 
-### 3.1 为何"一人 Carry"时原子化提交是生命线
+改造方案：引入独立的数据快照互斥锁 `g_data_mutex`（与 I2C 总线锁分离，避免锁竞争）。
+主线程在数据发送路径中持锁，TCP 线程在 `data_fusion_build_json()` 内部持锁，
+确保任一时刻只有一个线程访问传感器数据。
 
-当一个开发者同时扮演架构师、执行者、测试者三个角色时，
-最大的敌人不是技术难度，而是**上下文丢失**。
+改动文件：`lib/app/health_monitor_main.c`、`lib/app/health_monitor_main.h`，
+提交记录：`d2effd6`。
 
-本次项目的真实案例：
+### 2.3 改造前后对比
 
-1. Plan B 提交 `a58a40c` 后，我立即开始 Plan A。
-   如果 Plan A 引入了回归 bug，`git bisect` 可以精确指向 `8aa7fb2`。
-   如果我把 B 和 A 混在一个 Commit 里，排查范围将扩大 2 倍。
+| 指标 | 改造前 | 改造后 |
+|------|--------|--------|
+| I2C 总线保护 | 无 | 全局互斥锁 + 超时恢复 |
+| 锁超时策略 | `osWaitForever`（永久阻塞） | 500ms 超时 + GPIO 总线恢复 + 重试 |
+| OLED 刷新原子性 | 单事务锁（可被穿插） | 操作级锁（整屏持锁） |
+| 同线程死锁风险 | 无（无锁） → 引入锁后存在 | `_locked` 变体规避 |
+| 跨线程数据一致性 | 无保护 | 独立数据快照互斥锁 |
 
-2. Plan A 开发过程中发现了同线程死锁问题（`ssd1306_SendData` 内部锁）。
-   这个发现直接影响了实现方案——从"调用方加锁"改为"驱动层 `_locked` 变体"。
-   原子化提交让这个决策过程被完整保留在 Commit message 中，
-   未来的维护者可以理解**为什么**有 `_locked` 后缀的函数。
+### 2.4 关键源文件索引
 
-**教训**：单兵作战时，Commit 就是你的外部记忆。
-每个 Commit 应该是一个自洽的、可回滚的、有明确意图的变更单元。
-
-### 3.2 本次工程化改造的纪念碑
-
-以下文件是本次安全加固的核心战场，记录于此供未来参考：
-
-| 文件 | 角色 | 关键改造 |
-|------|------|----------|
-| `lib/system/i2c_master.c` | I2C 总线管理 | 超时机制 + 运行时总线恢复 |
-| `lib/output/ssd1306.c` | OLED 驱动 | `_locked` 变体规避同线程死锁 |
-| `lib/output/ssd1306.h` | OLED 头文件 | 新增 `ssd1306_UpdateScreen_locked` 声明 |
-| `lib/app/health_monitor_main.c` | 业务主循环 | 数据快照互斥锁 + OLED 持锁刷屏 |
-| `lib/app/health_monitor_main.h` | 业务头文件 | `data_lock`/`data_unlock` 公共接口 |
-
-### 3.3 项目生命周期数据
-
-```
-总提交数：     15+
-开发阶段：     Phase 1 (Sensors) → Phase 2 (WiFi AP) → Phase 3 (TCP Server) → Security Hardening
-代码行数：     ~3000 行 C（lib/ 目录）
-外设驱动：     MPU6050, SSD1306, KY-039, SW-420, RGB LED, Buzzer, Vibration Motor
-通信协议：     SLE (星闪) + WiFi TCP (SoftAP)
-Android 客户端：Java/Gradle, 6 个 Activity
-开发工具链：    Python serial monitor + AI engine
-```
+| 文件路径 | 职责 |
+|----------|------|
+| `lib/system/i2c_master.c` | I2C 总线初始化、互斥锁管理、总线恢复 |
+| `lib/system/i2c_master.h` | I2C 锁接口声明 |
+| `lib/output/ssd1306.c` | SSD1306 OLED 驱动（含 `_locked` 变体） |
+| `lib/output/ssd1306.h` | SSD1306 公共接口声明 |
+| `lib/sensor/mpu6050.c` | MPU6050 IMU 驱动 |
+| `lib/app/health_monitor_main.c` | 系统主循环、数据融合、状态机 |
+| `lib/app/health_monitor_main.h` | 系统接口声明（含数据锁接口） |
 
 ---
 
-## 四、项目封存检查清单
+## 三、项目开发阶段总结
 
-- [x] I2C 总线安全：超时 + 恢复 + 持锁刷屏
-- [x] 跨线程数据同步：`g_data_mutex`
-- [x] CHANGELOG.md 已更新至最新状态
-- [x] 所有代码提交已推送到 main 分支
-- [x] 工程模板已萃取至本文档
-- [x] 远程仓库指向 `https://github.com/wozdwuyuya/Integrated-Practice.git`
+### 3.1 Phase 1：传感器驱动与算法集成
 
-**项目状态：FROZEN**
+完成 MPU6050（六轴 IMU）、KY-039（心率 ADC）、SW-420（振动检测）、
+MAX30102（血氧）等传感器驱动开发。集成跌倒检测、呼吸引导、健康告警、
+姿态估计（互补滤波）等算法模块。实现 SSD1306 OLED 显示、RGB LED、
+蜂鸣器、振动马达等输出设备驱动。
 
-下一步赛道：跨平台 App 与电商 AI 工具开发。
+### 3.2 Phase 2：WiFi AP 模式与网络通信
+
+实现 WiFi SoftAP 热点初始化（SSID: HealthMonitor），配置 DHCP 服务器，
+为 Android 客户端提供无线接入能力。
+
+### 3.3 Phase 3：TCP 数据传输与命令处理
+
+实现 TCP Server 后台任务，支持 JSON 格式传感器数据定时推送（1s 周期）
+和客户端命令接收处理。集成 cJSON 库实现结构化数据序列化。
+
+### 3.4 安全加固阶段
+
+针对 I2C 总线冲突和跨线程数据竞争问题，实施三轮安全改造（详见第二章）。
+
+---
+
+## 四、项目统计
+
+| 指标 | 数据 |
+|------|------|
+| 代码总量 | ~3000 行 C（lib/ 目录） |
+| 传感器驱动 | MPU6050, KY-039, SW-420, MAX30102 |
+| 输出设备 | SSD1306 OLED, RGB LED, 蜂鸣器, 振动马达 |
+| 通信协议 | 星闪（SLE）+ WiFi TCP（SoftAP） |
+| RTOS 线程数 | 2（MainTask + TCPServerTask） |
+| Android 客户端 | Java/Gradle，6 个 Activity |
+| 测试工具 | Python 串口监控 + 数据工厂 |
