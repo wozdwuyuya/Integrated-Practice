@@ -85,9 +85,21 @@ void health_monitor_process_command(const char *cmd);
 
 /**
  * @brief 构建传感器数据融合的JSON字符串（使用cJSON）
+ * @note  内部持有数据快照锁，线程安全
  * @note  返回的字符串由调用方负责 cJSON_free() 释放
  * @return JSON字符串指针，失败返回NULL
  */
 char *data_fusion_build_json(void);
+
+/**
+ * @brief 获取数据快照互斥锁（跨线程调用方使用）
+ * @return true成功，false失败
+ */
+bool health_monitor_data_lock(void);
+
+/**
+ * @brief 释放数据快照互斥锁
+ */
+void health_monitor_data_unlock(void);
 
 #endif // HEALTH_MONITOR_MAIN_H

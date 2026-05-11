@@ -34,6 +34,9 @@ static uint32_t g_last_update_time = 0;
 static uint32_t g_last_oled_time = 0;
 static uint32_t g_last_data_send_time = 0;
 
+// Plan C: 数据快照互斥锁，保护跨线程共享传感器数据
+static osMutexId_t g_data_mutex = NULL;
+
 // 传感器数据
 static float g_accel[3] = {0};
 static float g_gyro[3] = {0};
@@ -104,6 +107,11 @@ bool health_monitor_init(void){
     bool init_ok = true;
     osal_printk("=== Smart Health Monitor System ===\r\n");
     osal_printk("Mode: %s\r\n", MOCK_HARDWARE_MODE ? "MOCK" : "REAL");
+
+    // Plan C: 创建数据快照互斥锁
+    if(g_data_mutex == NULL) {
+        g_data_mutex = osMutexNew(NULL);
+    }
 
 #if MOCK_HARDWARE_MODE
     osal_printk("[MOCK] Skipping hardware init, using simulated data\r\n");
@@ -362,9 +370,16 @@ static void send_data_to_serial(void){
 }
 
 // [Phase 3] 数据融合JSON构建（使用cJSON，供TCP通道使用）
+// Plan C: 持有数据快照锁，确保从TCP线程调用时读取一致的传感器数据
 char *data_fusion_build_json(void){
+    if(!health_monitor_data_lock()) {
+        return NULL;
+    }
     cJSON *root = cJSON_CreateObject();
-    if(root == NULL) return NULL;
+    if(root == NULL) {
+        health_monitor_data_unlock();
+        return NULL;
+    }
 
     // 核心生命体征
     cJSON_AddNumberToObject(root, "hr", (double)g_heart_rate);
@@ -409,7 +424,23 @@ char *data_fusion_build_json(void){
 
     char *json_str = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
+    health_monitor_data_unlock();
     return json_str;
+}
+
+// Plan C: 获取数据快照锁（供tcp_server等跨线程调用方使用）
+bool health_monitor_data_lock(void){
+    if(g_data_mutex == NULL) {
+        return false;
+    }
+    return (osMutexAcquire(g_data_mutex, osWaitForever) == osOK);
+}
+
+// Plan C: 释放数据快照锁
+void health_monitor_data_unlock(void){
+    if(g_data_mutex != NULL) {
+        osMutexRelease(g_data_mutex);
+    }
 }
 
 // 发送传感器数据到手机端（通过SLE）
@@ -539,12 +570,16 @@ void health_monitor_loop(void){
 #endif
 
     // 定期发送数据（两种模式都发串口，仅真实模式发SLE）
+    // Plan C: 持有数据快照锁，确保TCP线程读取时数据一致
     if(current_time - g_last_data_send_time >= DATA_SEND_INTERVAL_MS) {
         g_last_data_send_time = current_time;
-        send_data_to_serial();
+        if(health_monitor_data_lock()) {
+            send_data_to_serial();
 #if !MOCK_HARDWARE_MODE
-        health_monitor_send_data();
+            health_monitor_send_data();
 #endif
+            health_monitor_data_unlock();
+        }
     }
 
     // 更新提醒动画和震动（仅真实模式）
