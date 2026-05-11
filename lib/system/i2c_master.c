@@ -13,6 +13,9 @@
 
 static osMutexId_t g_i2c_bus_mutex = NULL;  // I2C总线互斥锁
 
+// I2C锁超时：防止总线挂死导致线程永久阻塞
+#define I2C_LOCK_TIMEOUT_MS  500
+
 /**
  * I2C引脚配置说明：
  *   当前配置：SCL=GPIO15(Pin9), SDA=GPIO16(Pin10)
@@ -135,12 +138,22 @@ osMutexId_t i2c_master_get_mutex(void){
     return g_i2c_bus_mutex;
 }
 
-// 获取I2C总线锁
+// 获取I2C总线锁（带超时和运行时总线恢复）
 bool i2c_master_lock(void){
     if(g_i2c_bus_mutex == NULL) {
         return false;
     }
-    return (osMutexAcquire(g_i2c_bus_mutex, osWaitForever) == osOK);
+    osStatus_t status = osMutexAcquire(g_i2c_bus_mutex, I2C_LOCK_TIMEOUT_MS);
+    if(status != osOK) {
+        osal_printk("[I2C] Mutex acquire timeout (0x%X)! Attempting bus recovery...\r\n", status);
+        i2c_bus_recovery();
+        status = osMutexAcquire(g_i2c_bus_mutex, I2C_LOCK_TIMEOUT_MS);
+        if(status != osOK) {
+            osal_printk("[I2C] Bus recovery failed, lock still unavailable (0x%X)\r\n", status);
+            return false;
+        }
+    }
+    return true;
 }
 
 // 释放I2C总线锁
