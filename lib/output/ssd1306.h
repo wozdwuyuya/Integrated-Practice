@@ -76,6 +76,7 @@ void ssd1306_Init(void);
 void ssd1306_Fill(SSD1306_COLOR color);
 void ssd1306_SetCursor(uint8_t x, uint8_t y);
 void ssd1306_UpdateScreen(void);
+void ssd1306_UpdateScreen_locked(void);
 
 char ssd1306_DrawChar(char ch, FontDef Font, SSD1306_COLOR color);
 char ssd1306_DrawString(char *str, FontDef Font, SSD1306_COLOR color);

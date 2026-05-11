@@ -250,9 +250,11 @@ static void update_sensor_data(void){
 }
 
 // [四柱-架构] 更新OLED显示（状态驱动）
+// Plan A: 函数内部持有I2C锁，使用_locked变体刷屏，减少与MPU6050的总线交错
 static void update_oled_display(void){
     char buf[32];
 
+    // 以下操作仅操作本地缓冲区，无需加锁
     switch(g_system_state) {
         case SYS_STATE_ALERT:
             // 报警状态：全屏显示报警信息
@@ -321,7 +323,11 @@ static void update_oled_display(void){
             break;
     }
 
-    ssd1306_UpdateScreen();
+    // 持有I2C锁刷屏：整个UpdateScreen期间独占总线，防止MPU6050交错
+    if(i2c_master_lock()) {
+        ssd1306_UpdateScreen_locked();
+        i2c_master_unlock();
+    }
 }
 
 // 发送数据到上位机（串口）

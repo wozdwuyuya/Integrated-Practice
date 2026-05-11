@@ -47,22 +47,29 @@ void ssd1306_Reset(void) {
     /* for I2C - do nothing */
 }
 
-static uint32_t ssd1306_SendData(uint8_t *buffer, uint32_t size)
+// I2C底层写入（不加锁，调用方需已持有总线锁）
+static uint32_t ssd1306_i2c_write_raw(uint8_t *buffer, uint32_t size)
 {
     uint16_t dev_addr = I2C_SLAVE2_ADDR;
     i2c_data_t data = {0};
     data.send_buf = buffer;
     data.send_len = size;
-    if(!i2c_master_lock()) {
-        return 1;
-    }
     uint32_t retval = uapi_i2c_master_write(CONFIG_I2C_MASTER_BUS_ID, dev_addr, &data);
-    i2c_master_unlock();
     if (retval != 0) {
         printf("I2cWrite(%02X) failed, %0X!\n", data.send_buf[1], retval);
         return retval;
     }
     return 0;
+}
+
+static uint32_t ssd1306_SendData(uint8_t *buffer, uint32_t size)
+{
+    if(!i2c_master_lock()) {
+        return 1;
+    }
+    uint32_t retval = ssd1306_i2c_write_raw(buffer, size);
+    i2c_master_unlock();
+    return retval;
 }
 
 static uint32_t ssd1306_WiteByte(uint8_t regAddr, uint8_t byte)
@@ -75,6 +82,13 @@ static uint32_t ssd1306_WiteByte(uint8_t regAddr, uint8_t byte)
 void ssd1306_WriteCommand(uint8_t byte)
 {
     ssd1306_WiteByte(SSD1306_CTRL_CMD, byte);
+}
+
+// Send a byte to the command register（调用方已持有I2C锁）
+void ssd1306_WriteCommand_locked(uint8_t byte)
+{
+    uint8_t buffer[] = {SSD1306_CTRL_CMD, byte};
+    ssd1306_i2c_write_raw(buffer, sizeof(buffer));
 }
 
 // Send data
@@ -90,6 +104,21 @@ void ssd1306_WriteData(uint8_t *buffer, uint32_t buff_size)
     }
     data[(buff_size - 1) * DOUBLE] = SSD1306_CTRL_DATA;
     ssd1306_SendData(data, buff_size * DOUBLE);
+}
+
+// Send data（调用方已持有I2C锁）
+void ssd1306_WriteData_locked(uint8_t *buffer, uint32_t buff_size)
+{
+    uint8_t data[SSD1306_WIDTH * DOUBLE] = {0};
+    if (buff_size > SSD1306_WIDTH) {
+        buff_size = SSD1306_WIDTH;
+    }
+    for (uint32_t i = 0; i < buff_size; i++) {
+        data[i * DOUBLE] = SSD1306_CTRL_DATA | SSD1306_MASK_CONT;
+        data[i * DOUBLE + 1] = buffer[i];
+    }
+    data[(buff_size - 1) * DOUBLE] = SSD1306_CTRL_DATA;
+    ssd1306_i2c_write_raw(data, buff_size * DOUBLE);
 }
 
 #elif defined(SSD1306_USE_SPI)
@@ -297,6 +326,17 @@ void ssd1306_UpdateScreen(void)
         ssd1306_WriteCommand(0x00 + SSD1306_X_OFFSET_LOWER);
         ssd1306_WriteCommand(0x10 + SSD1306_X_OFFSET_UPPER);
         ssd1306_WriteData(&SSD1306_Buffer[SSD1306_WIDTH*i],SSD1306_WIDTH);
+    }
+}
+
+// 更新屏幕（调用方已持有I2C锁，内部不再重复加锁）
+void ssd1306_UpdateScreen_locked(void)
+{
+    for(uint8_t i = 0; i < SSD1306_HEIGHT/8; i++) {
+        ssd1306_WriteCommand_locked(0xB0 + i);
+        ssd1306_WriteCommand_locked(0x00 + SSD1306_X_OFFSET_LOWER);
+        ssd1306_WriteCommand_locked(0x10 + SSD1306_X_OFFSET_UPPER);
+        ssd1306_WriteData_locked(&SSD1306_Buffer[SSD1306_WIDTH*i], SSD1306_WIDTH);
     }
 }
 
